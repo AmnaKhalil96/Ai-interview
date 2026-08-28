@@ -1,0 +1,42 @@
+rules_version = '2';
+
+// Firestore security rules for InterviewIQ.
+//
+// Scope: the `sessions` collection is the only data this app writes.
+// Every document carries a `userId` field set at creation time (see
+// src/lib/sessions.ts) and the app's own queries already filter by
+// `where("userId", "==", user.uid)` — these rules are what actually
+// enforce that server-side, since client-side filtering alone doesn't
+// stop a request that skips the app entirely.
+//
+// - read:   only the owner (their own uid must match the document's
+//           userId) may read a session document.
+// - create: only allowed if the uid on the token creating the document
+//           matches the userId being written — a signed-in user can't
+//           create a session under someone else's uid.
+// - update, delete: disabled entirely. Sessions are write-once records
+//           of a completed practice run; nothing in the app ever edits
+//           or removes one after creation, so there's no legitimate path
+//           that needs to mutate an existing document.
+//
+// Deploy from the Firebase Console: Firestore Database -> Rules -> paste
+// this file's contents -> Publish. (Or via the Firebase CLI:
+// `firebase deploy --only firestore:rules`, if the project is set up
+// with the CLI.)
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /sessions/{sessionId} {
+      allow read: if request.auth != null
+                  && request.auth.uid == resource.data.userId;
+
+      allow create: if request.auth != null
+                    && request.auth.uid == request.resource.data.userId;
+
+      allow update, delete: if false;
+    }
+
+    // Everything else is denied by default (no catch-all `match /{document=**}`
+    // rule is defined), which is the desired posture: only `sessions` is a
+    // real collection in this app.
+  }
+}
