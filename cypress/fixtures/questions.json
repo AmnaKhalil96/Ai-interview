@@ -1,0 +1,9 @@
+{
+  "questions": [
+    { "id": "q1", "type": "behavioral", "question": "Tell me about a time you owned an incident in a critical service." },
+    { "id": "q2", "type": "behavioral", "question": "Describe a time you mentored a junior engineer through a difficult problem." },
+    { "id": "q3", "type": "behavioral", "question": "Tell me about a disagreement you had with a product manager over scope." },
+    { "id": "q4", "type": "technical", "question": "How would you design idempotent payment endpoints backed by PostgreSQL?" },
+    { "id": "q5", "type": "technical", "question": "How do you maintain data consistency across microservices during network partitions?" }
+  ]
+}

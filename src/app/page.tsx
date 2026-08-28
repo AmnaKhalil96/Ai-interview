@@ -1,101 +1,62 @@
-import Image from "next/image";
+import Kicker from "@/components/ui/Kicker";
+import IndexItem from "@/components/ui/IndexItem";
+import JobDescriptionForm from "@/components/JobDescriptionForm";
 
-export default function Home() {
+// This file stays a plain server component — the only interactive piece
+// (the textarea + submit state) is isolated inside <JobDescriptionForm>,
+// so the page itself doesn't need "use client" and everything else here
+// ships as static markup.
+export default function LandingPage() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <main className="relative min-h-screen overflow-hidden bg-paper">
+      {/* Faint dot grid instead of a gradient blob — a drafting-surface
+          texture that fits the editorial identity without competing with
+          the content on top of it. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 bg-dots bg-dots opacity-[0.35]"
+      />
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+      <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col px-6 sm:px-10">
+        <section className="grid flex-1 grid-cols-1 items-center gap-16 py-12 lg:grid-cols-[1.1fr_1fr] lg:gap-12 lg:py-0">
+          <div className="flex flex-col gap-8">
+            <div className="animate-fade-up flex flex-col gap-6">
+              <Kicker>AI interview coach</Kicker>
+              <h1 className="max-w-xl font-display text-5xl leading-[1.05] tracking-tight text-ink sm:text-6xl">
+                Rehearse the interview you haven&apos;t had yet.
+              </h1>
+              <p className="max-w-md text-lg leading-relaxed text-ink-soft">
+                Paste the job description below. InterviewIQ drafts
+                behavioral and technical questions built for that exact
+                role, then gives you structured feedback on every answer you
+                give.
+              </p>
+            </div>
+
+            <div className="animate-fade-up [animation-delay:100ms] flex flex-col">
+              <IndexItem
+                number="01"
+                title="Paste the role"
+                description="Drop in any job description — the more specific, the more tailored your questions."
+              />
+              <IndexItem
+                number="02"
+                title="Answer, out loud or written"
+                description="Work through a mix of behavioral and technical questions built for that role."
+              />
+              <IndexItem
+                number="03"
+                title="See what to fix"
+                description="Each answer comes back with a score, what worked, what's missing, and a stronger version."
+              />
+            </div>
+          </div>
+
+          <div className="lg:pt-4">
+            <JobDescriptionForm />
+          </div>
+        </section>
+      </div>
+    </main>
   );
 }
