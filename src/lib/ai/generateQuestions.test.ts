@@ -13,6 +13,13 @@ const mockGenerateContent = vi.fn();
 
 vi.mock("@google/generative-ai", () => {
   class GoogleGenerativeAIAbortError extends Error {}
+  class GoogleGenerativeAIFetchError extends Error {
+    status?: number;
+    constructor(message: string, status?: number) {
+      super(message);
+      this.status = status;
+    }
+  }
   class GoogleGenerativeAI {
     constructor() {}
     getGenerativeModel() {
@@ -22,6 +29,7 @@ vi.mock("@google/generative-ai", () => {
   return {
     GoogleGenerativeAI,
     GoogleGenerativeAIAbortError,
+    GoogleGenerativeAIFetchError,
     SchemaType: { OBJECT: "OBJECT", ARRAY: "ARRAY", STRING: "STRING", INTEGER: "INTEGER", BOOLEAN: "BOOLEAN" },
   };
 });

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { evaluateAnswer, AIGenerationError } from "@/lib/ai/evaluateAnswer";
+import { requireAuthenticatedRequest } from "@/lib/requireAuthenticatedRequest";
 import type { QuestionType } from "@/types";
 
 // Mirrors app/api/generate-questions/route.ts: validate everything the AI
@@ -8,11 +9,32 @@ import type { QuestionType } from "@/types";
 // way the client can handle identically.
 const MAX_ANSWER_LENGTH = 4000;
 
+// Higher than generate-questions' limit on purpose: a single practice
+// session answers 5 questions, each firing one evaluate-answer call, plus
+// realistic retries (see AnswerInput's "Retry this question") — 30/hour
+// covers several sessions' worth of evaluations for one user while still
+// capping runaway/scripted abuse.
+const RATE_LIMIT = 30;
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+
+// See the matching comment in generate-questions/route.ts: Vercel Hobby's
+// 60s ceiling, Gemini's own 20s timeout, 30s split the difference with
+// headroom for auth verification and parsing.
+export const maxDuration = 30;
+
 function isQuestionType(value: unknown): value is QuestionType {
   return value === "behavioral" || value === "technical";
 }
 
 export async function POST(request: Request) {
+  const authResult = await requireAuthenticatedRequest(
+    request,
+    "evaluate-answer",
+    RATE_LIMIT,
+    RATE_LIMIT_WINDOW_MS
+  );
+  if (authResult instanceof NextResponse) return authResult;
+
   let body: unknown;
   try {
     body = await request.json();

@@ -1,6 +1,7 @@
-import { GoogleGenerativeAI, GoogleGenerativeAIAbortError, SchemaType } from "@google/generative-ai";
+import { SchemaType } from "@google/generative-ai";
 import type { Feedback, QuestionType } from "@/types";
 import { AIGenerationError } from "./errors";
+import { generateContentWithFallback } from "./geminiClient";
 
 // Mirrors generateQuestions.ts on purpose: same isolation rationale (every
 // Gemini-specific detail — SDK, model name, schema, raw-text parsing —
@@ -111,54 +112,27 @@ function parseFeedback(rawText: string): Feedback {
 }
 
 export async function evaluateAnswer(input: EvaluateAnswerInput): Promise<Feedback> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new AIGenerationError(
-      "api_error",
-      "The AI provider isn't configured (missing GEMINI_API_KEY)."
-    );
-  }
-
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({
-    model: MODEL_NAME,
-    generationConfig: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: SchemaType.OBJECT,
-        properties: {
-          score: { type: SchemaType.INTEGER },
-          strengths: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-          gaps: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-          improvedAnswer: { type: SchemaType.STRING },
+  const responseText = await generateContentWithFallback({
+    modelParams: {
+      model: MODEL_NAME,
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: SchemaType.OBJECT,
+          properties: {
+            score: { type: SchemaType.INTEGER },
+            strengths: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+            gaps: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+            improvedAnswer: { type: SchemaType.STRING },
+          },
+          required: ["score", "strengths", "gaps", "improvedAnswer"],
         },
-        required: ["score", "strengths", "gaps", "improvedAnswer"],
       },
     },
+    prompt: buildPrompt(input),
+    timeoutMs: GEMINI_TIMEOUT_MS,
+    logPrefix: "[evaluateAnswer]",
   });
-
-  let responseText: string;
-  try {
-    const result = await model.generateContent(buildPrompt(input), {
-      timeout: GEMINI_TIMEOUT_MS,
-    });
-    responseText = result.response.text();
-  } catch (error) {
-    // Logged server-side (not shown to the user) because the generic
-    // "request failed" message alone gave no way to tell a rate limit
-    // apart from a network stall apart from a bad request when debugging.
-    console.error("[evaluateAnswer] Gemini request failed:", error);
-    if (error instanceof GoogleGenerativeAIAbortError) {
-      throw new AIGenerationError(
-        "api_error",
-        "The AI is taking too long to respond. Please try again."
-      );
-    }
-    throw new AIGenerationError(
-      "api_error",
-      "The AI request failed. Please try again in a moment."
-    );
-  }
 
   return parseFeedback(responseText);
 }

@@ -48,9 +48,14 @@ export default function JobDescriptionForm() {
     setErrorKind(null);
 
     try {
+      // The route requires a verified Firebase ID token (see
+      // requireAuthenticatedRequest.ts) — `user` is guaranteed non-null
+      // here since this component renders the sign-in prompt instead of
+      // this form whenever it isn't.
+      const idToken = await user?.getIdToken();
       const response = await fetch("/api/generate-questions", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
         body: JSON.stringify({ jobDescription: jobDescription.trim(), difficulty }),
       });
 

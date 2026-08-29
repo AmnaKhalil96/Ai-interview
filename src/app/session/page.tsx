@@ -104,9 +104,14 @@ export default function SessionPage() {
     setEvalError(null);
 
     try {
+      // The route requires a verified Firebase ID token (see
+      // requireAuthenticatedRequest.ts) — `user` is guaranteed non-null
+      // here since this page redirects to /login otherwise (see the
+      // effect above).
+      const idToken = await user?.getIdToken();
       const response = await fetch("/api/evaluate-answer", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
         body: JSON.stringify({
           question: currentQuestion.question,
           questionType: currentQuestion.type,

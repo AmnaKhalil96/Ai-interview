@@ -1,12 +1,35 @@
 import { NextResponse } from "next/server";
 import { generateQuestions, AIGenerationError } from "@/lib/ai/generateQuestions";
 import { isDifficulty } from "@/lib/difficulty";
+import { requireAuthenticatedRequest } from "@/lib/requireAuthenticatedRequest";
 
 // Kept in sync with the textarea's own limit on the landing page — this is
 // the server-side backstop so the route never trusts the client alone.
 const MAX_JOB_DESCRIPTION_LENGTH = 3000;
 
+// Question generation is naturally a once-per-session action (one call
+// kicks off 5 questions), so a lower hourly ceiling than evaluate-answer
+// (see that route) still comfortably covers many practice sessions per
+// hour while capping how much Gemini quota one signed-in user can burn.
+const RATE_LIMIT = 20;
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+
+// Vercel Hobby plan caps any single function at 60s; Gemini's own
+// generateContent call already times out at 20s (see
+// lib/ai/generateQuestions.ts). 30s leaves headroom above that timeout
+// plus ID-token verification and request parsing, well under the
+// platform ceiling.
+export const maxDuration = 30;
+
 export async function POST(request: Request) {
+  const authResult = await requireAuthenticatedRequest(
+    request,
+    "generate-questions",
+    RATE_LIMIT,
+    RATE_LIMIT_WINDOW_MS
+  );
+  if (authResult instanceof NextResponse) return authResult;
+
   let body: unknown;
   try {
     body = await request.json();

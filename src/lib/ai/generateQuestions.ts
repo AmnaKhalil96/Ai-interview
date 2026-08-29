@@ -1,6 +1,7 @@
-import { GoogleGenerativeAI, GoogleGenerativeAIAbortError, SchemaType } from "@google/generative-ai";
+import { SchemaType } from "@google/generative-ai";
 import type { Difficulty, Question, QuestionType } from "@/types";
 import { AIGenerationError } from "./errors";
+import { generateContentWithFallback } from "./geminiClient";
 
 // Every Gemini-specific detail (the SDK, the model name, the response
 // schema, the raw-text parsing) stays inside this one file. The rest of
@@ -182,63 +183,37 @@ function parseGenerationResult(rawText: string): Question[] {
 }
 
 export async function generateQuestions(jobDescription: string, difficulty: Difficulty): Promise<Question[]> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new AIGenerationError(
-      "api_error",
-      "The AI provider isn't configured (missing GEMINI_API_KEY)."
-    );
-  }
-
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({
-    model: MODEL_NAME,
-    generationConfig: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: SchemaType.OBJECT,
-        properties: {
-          isValidJobDescription: { type: SchemaType.BOOLEAN },
-          reason: { type: SchemaType.STRING },
-          questions: {
-            type: SchemaType.ARRAY,
-            items: {
-              type: SchemaType.OBJECT,
-              properties: {
-                id: { type: SchemaType.STRING },
-                type: { type: SchemaType.STRING, format: "enum", enum: ["behavioral", "technical"] },
-                question: { type: SchemaType.STRING },
+  const responseText = await generateContentWithFallback({
+    modelParams: {
+      model: MODEL_NAME,
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: SchemaType.OBJECT,
+          properties: {
+            isValidJobDescription: { type: SchemaType.BOOLEAN },
+            reason: { type: SchemaType.STRING },
+            questions: {
+              type: SchemaType.ARRAY,
+              items: {
+                type: SchemaType.OBJECT,
+                properties: {
+                  id: { type: SchemaType.STRING },
+                  type: { type: SchemaType.STRING, format: "enum", enum: ["behavioral", "technical"] },
+                  question: { type: SchemaType.STRING },
+                },
+                required: ["id", "type", "question"],
               },
-              required: ["id", "type", "question"],
             },
           },
+          required: ["isValidJobDescription", "reason", "questions"],
         },
-        required: ["isValidJobDescription", "reason", "questions"],
       },
     },
+    prompt: buildPrompt(jobDescription, difficulty),
+    timeoutMs: GEMINI_TIMEOUT_MS,
+    logPrefix: "[generateQuestions]",
   });
-
-  let responseText: string;
-  try {
-    const result = await model.generateContent(buildPrompt(jobDescription, difficulty), {
-      timeout: GEMINI_TIMEOUT_MS,
-    });
-    responseText = result.response.text();
-  } catch (error) {
-    // Logged server-side (not shown to the user) — see the matching
-    // comment in evaluateAnswer.ts for why.
-    console.error("[generateQuestions] Gemini request failed:", error);
-    if (error instanceof GoogleGenerativeAIAbortError) {
-      throw new AIGenerationError(
-        "api_error",
-        "The AI is taking too long to respond. Please try again."
-      );
-    }
-    throw new AIGenerationError(
-      "api_error",
-      "The AI request failed. Please try again in a moment."
-    );
-  }
 
   return parseGenerationResult(responseText);
 }
